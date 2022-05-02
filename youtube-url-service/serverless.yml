@@ -1,0 +1,20 @@
+service: youtube-url-service
+
+frameworkVersion: "2"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: serverless-admin
+  region: us-east-1
+  lambdaHashingVersion: 20201221
+
+functions:
+  candidateSubmission:
+    handler: api/url.submit
+    memorySize: 128
+    description: Submit url of youtube video .
+    events:
+      - http:
+          path: url
+          method: post
