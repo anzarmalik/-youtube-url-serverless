@@ -8,6 +8,15 @@ provider:
   stage: serverless-admin
   region: us-east-1
   lambdaHashingVersion: 20201221
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource: "*"
+
 
 functions:
   candidateSubmission:
@@ -18,3 +27,36 @@ functions:
       - http:
           path: url
           method: post
+
+  create:
+    handler: api/candidate.submit
+    memorySize: 128
+    description: Submit data .
+    events:
+      - http:
+          path: candidate
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    CandidatesDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"   
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: youtube_user_details
+
+

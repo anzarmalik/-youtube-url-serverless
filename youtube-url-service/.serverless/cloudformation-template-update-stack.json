@@ -77,6 +77,12 @@
         "LogGroupName": "/aws/lambda/youtube-url-service-serverless-admin-candidateSubmission"
       }
     },
+    "CreateLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/youtube-url-service-serverless-admin-create"
+      }
+    },
     "IamRoleLambdaExecution": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -133,6 +139,16 @@
                       "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/youtube-url-service-serverless-admin*:*:*"
                     }
                   ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:Query",
+                    "dynamodb:Scan",
+                    "dynamodb:GetItem",
+                    "dynamodb:PutItem"
+                  ],
+                  "Resource": "*"
                 }
               ]
             }
@@ -161,7 +177,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/youtube-url-service/serverless-admin/1651432622642-2022-05-01T19:17:02.642Z/youtube-url-service.zip"
+          "S3Key": "serverless/youtube-url-service/serverless-admin/1655399067789-2022-06-16T17:04:27.789Z/youtube-url-service.zip"
         },
         "Handler": "api/url.submit",
         "Runtime": "nodejs12.x",
@@ -180,15 +196,52 @@
         "CandidateSubmissionLogGroup"
       ]
     },
-    "CandidateSubmissionLambdaVersionLzRijtfh7EtmxX8pHvIKMDjPwQObaAM9db4IbUu0A": {
+    "CreateLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/youtube-url-service/serverless-admin/1655399067789-2022-06-16T17:04:27.789Z/youtube-url-service.zip"
+        },
+        "Handler": "api/candidate.submit",
+        "Runtime": "nodejs12.x",
+        "FunctionName": "youtube-url-service-serverless-admin-create",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Description": "Submit data .",
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "CreateLogGroup"
+      ]
+    },
+    "CandidateSubmissionLambdaVersionHNOu726eRrFF8UXcXghVa3zXYn5c10fTNI891sVG8": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "CandidateSubmissionLambdaFunction"
         },
-        "CodeSha256": "3l3WF4qW7ZLQnxIoo1kkrXJ/kc0gkpFPV2rfrlruRI4=",
+        "CodeSha256": "bJVznzHQqailvXVcKcBB+GSHMp3RFzoFGecxFPCrIm8=",
         "Description": "Submit url of youtube video ."
+      }
+    },
+    "CreateLambdaVersion2osAIwPCgf6hMkQVQ2fgZSodiYI3dYn7wwnnEm1Q": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "CreateLambdaFunction"
+        },
+        "CodeSha256": "bJVznzHQqailvXVcKcBB+GSHMp3RFzoFGecxFPCrIm8=",
+        "Description": "Submit data ."
       }
     },
     "ApiGatewayRestApi": {
@@ -213,6 +266,66 @@
           ]
         },
         "PathPart": "url",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayResourceCandidate": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "ApiGatewayRestApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "candidate",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayMethodCandidateOptions": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "OPTIONS",
+        "MethodResponses": [
+          {
+            "StatusCode": "200",
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": true,
+              "method.response.header.Access-Control-Allow-Headers": true,
+              "method.response.header.Access-Control-Allow-Methods": true
+            },
+            "ResponseModels": {}
+          }
+        ],
+        "RequestParameters": {},
+        "Integration": {
+          "Type": "MOCK",
+          "RequestTemplates": {
+            "application/json": "{statusCode:200}"
+          },
+          "ContentHandling": "CONVERT_TO_TEXT",
+          "IntegrationResponses": [
+            {
+              "StatusCode": "200",
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+              },
+              "ResponseTemplates": {
+                "application/json": ""
+              }
+            }
+          ]
+        },
+        "ResourceId": {
+          "Ref": "ApiGatewayResourceCandidate"
+        },
         "RestApiId": {
           "Ref": "ApiGatewayRestApi"
         }
@@ -264,7 +377,53 @@
         "CandidateSubmissionLambdaPermissionApiGateway"
       ]
     },
-    "ApiGatewayDeployment1651432621545": {
+    "ApiGatewayMethodCandidatePost": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "HttpMethod": "POST",
+        "RequestParameters": {},
+        "ResourceId": {
+          "Ref": "ApiGatewayResourceCandidate"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "ApiKeyRequired": false,
+        "AuthorizationType": "NONE",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":apigateway:",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ":lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "CreateLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        },
+        "MethodResponses": []
+      },
+      "DependsOn": [
+        "CreateLambdaPermissionApiGateway"
+      ]
+    },
+    "ApiGatewayDeployment1655399066652": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -273,7 +432,9 @@
         "StageName": "serverless-admin"
       },
       "DependsOn": [
-        "ApiGatewayMethodUrlPost"
+        "ApiGatewayMethodCandidateOptions",
+        "ApiGatewayMethodUrlPost",
+        "ApiGatewayMethodCandidatePost"
       ]
     },
     "CandidateSubmissionLambdaPermissionApiGateway": {
@@ -312,6 +473,69 @@
           ]
         }
       }
+    },
+    "CreateLambdaPermissionApiGateway": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "CreateLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "/*/*"
+            ]
+          ]
+        }
+      }
+    },
+    "CandidatesDynamoDbTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 1,
+          "WriteCapacityUnits": 1
+        },
+        "StreamSpecification": {
+          "StreamViewType": "NEW_AND_OLD_IMAGES"
+        },
+        "TableName": "youtube_user_details"
+      }
     }
   },
   "Outputs": {
@@ -326,10 +550,19 @@
     "CandidateSubmissionLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "CandidateSubmissionLambdaVersionLzRijtfh7EtmxX8pHvIKMDjPwQObaAM9db4IbUu0A"
+        "Ref": "CandidateSubmissionLambdaVersionHNOu726eRrFF8UXcXghVa3zXYn5c10fTNI891sVG8"
       },
       "Export": {
         "Name": "sls-youtube-url-service-serverless-admin-CandidateSubmissionLambdaFunctionQualifiedArn"
+      }
+    },
+    "CreateLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "CreateLambdaVersion2osAIwPCgf6hMkQVQ2fgZSodiYI3dYn7wwnnEm1Q"
+      },
+      "Export": {
+        "Name": "sls-youtube-url-service-serverless-admin-CreateLambdaFunctionQualifiedArn"
       }
     },
     "ServiceEndpoint": {
