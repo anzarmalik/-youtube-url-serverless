@@ -1,3 +1,5 @@
+org: anzar
+app: youtube-url-service
 service: youtube-url-service
 
 frameworkVersion: "2"
